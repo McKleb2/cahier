@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cahier de classe</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b4c9b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cahier">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style id="page-style">@page { size: A4 portrait; margin: 12mm; }</style>
+<style>
+/* Layout : barre du haut (classe + onglets), contenu en une colonne large, papier blanc pour l'aperçu d'impression */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #eaeef6;
+  --fg: #1c2333;
+  --muted: #5c6880;
+  --line: #d5dbe7;
+  --accent: #2b4c9b;        /* bleu encre */
+  --accent-soft: #e2e9f8;
+  --margin-red: #d4485a;    /* marge rouge du cahier Seyès */
+  --ok: #1f7a4d;  --ok-soft: #dcf1e5;
+  --ko: #b3261e;  --ko-soft: #fbe1df;
+  --late: #9a6100; --late-soft: #fbecd0;
+  --font-display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151f; --surface: #1a2030; --surface-2: #232b3e; --fg: #e6eaf3; --muted: #9aa6bf; --line: #2f3a52;
+  --accent: #8fb0ff; --accent-soft: #243258; --margin-red: #ff7d8c;
+  --ok: #6fd6a0; --ok-soft: #173a2a; --ko: #ff8f86; --ko-soft: #46201e; --late: #f2c063; --late-soft: #3f3116;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11151f; --surface: #1a2030; --surface-2: #232b3e; --fg: #e6eaf3; --muted: #9aa6bf; --line: #2f3a52;
+  --accent: #8fb0ff; --accent-soft: #243258; --margin-red: #ff7d8c;
+  --ok: #6fd6a0; --ok-soft: #173a2a; --ko: #ff8f86; --ko-soft: #46201e; --late: #f2c063; --late-soft: #3f3116;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Barre du haut */
+.topbar { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1200px; margin: 0 auto; padding-block: 10px 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.logo { width: 30px; height: 36px; border-radius: 3px; background:
+  linear-gradient(90deg, transparent 7px, var(--margin-red) 7px, var(--margin-red) 8.5px, transparent 8.5px),
+  repeating-linear-gradient(180deg, var(--surface) 0 5px, var(--accent-soft) 5px 6px);
+  border: 1.5px solid var(--accent); }
+.brand h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.class-picker { display: flex; gap: 8px; align-items: center; }
+.class-picker select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 700; max-width: 220px; }
+.tabs { display: flex; gap: 2px; margin-top: 8px; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 9px 14px; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 700; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab kbd { font: 11px var(--font-body); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+
+main { max-width: 1200px; margin: 0 auto; padding-block: 20px 60px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.toolbar .spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--ko); }
+.btn.small { padding: 4px 9px; font-size: 13px; }
+.btn.icon { padding: 4px 8px; }
+input[type=text], input[type=date], input[type=number], select, textarea {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+textarea { width: 100%; min-height: 140px; resize: vertical; }
+label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 700; }
+label.field input, label.field select { color: var(--fg); font-weight: 400; font-size: 15px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.panel h2 { font-size: 1.1rem; margin-bottom: 12px; }
+.hint { color: var(--muted); font-size: 13px; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Appel */
+.date-nav { display: flex; align-items: center; gap: 6px; }
+.date-nav .date-label { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; min-width: 0; text-transform: capitalize; }
+.counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; background: var(--surface-2); color: var(--muted); }
+.chip b { font-size: 15px; }
+.chip.P { background: var(--ok-soft); color: var(--ok); }
+.chip.A { background: var(--ko-soft); color: var(--ko); }
+.chip.R { background: var(--late-soft); color: var(--late); }
+.roll { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.roll-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--line); cursor: default; position: relative; }
+.roll-row:first-child { border-top: 0; }
+.roll-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; }
+.roll-row.st-P::before { background: var(--ok); }
+.roll-row.st-A::before { background: var(--ko); }
+.roll-row.st-A { background: var(--ko-soft); }
+.roll-row.st-R::before { background: var(--late); }
+.roll-row.st-R { background: var(--late-soft); }
+.roll-row:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.roll-num { text-align: right; color: var(--muted); font-size: 13px; }
+.roll-name { min-width: 0; overflow-wrap: anywhere; }
+.roll-name .last { font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.roll-name .stat { display: block; font-size: 12px; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 8px 13px; font-weight: 700; cursor: pointer; color: var(--muted); min-width: 44px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on.P { background: var(--ok); color: var(--surface); }
+.seg button.on.A { background: var(--ko); color: var(--surface); }
+.seg button.on.R { background: var(--late); color: var(--surface); }
+.appel-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .appel-layout { grid-template-columns: minmax(0, 1fr); } }
+.side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-list button { width: 100%; display: flex; justify-content: space-between; gap: 8px; border: 0; background: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; text-align: left; }
+.side-list button:hover, .side-list button.cur { background: var(--accent-soft); }
+.side-list .when { text-transform: capitalize; }
+.absent-names { margin: 6px 0 0; padding-left: 18px; }
+
+/* Notes */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+table.grades { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+table.grades th, table.grades td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 4px 6px; text-align: center; }
+table.grades thead th { background: var(--surface-2); vertical-align: bottom; font-size: 13px; position: sticky; top: 0; }
+table.grades .name-col { position: sticky; left: 0; background: var(--surface); text-align: left; min-width: 190px; z-index: 1; padding-left: 12px; }
+table.grades thead .name-col { background: var(--surface-2); z-index: 2; }
+table.grades tfoot td { background: var(--surface-2); font-weight: 700; font-size: 13px; }
+table.grades tfoot .name-col { background: var(--surface-2); }
+.eval-head { display: grid; gap: 2px; min-width: 92px; max-width: 140px; }
+.eval-head .t { font-weight: 700; color: var(--fg); overflow-wrap: anywhere; }
+.eval-head .m { color: var(--muted); font-weight: 400; }
+.eval-head .acts { display: flex; gap: 2px; justify-content: center; }
+.grade-in { width: 64px; text-align: center; padding: 5px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-variant-numeric: tabular-nums; }
+.grade-in:hover { border-color: var(--line); }
+.grade-in:focus { border-color: var(--accent); background: var(--accent-soft); outline: none; }
+.grade-in.bad { border-color: var(--ko); background: var(--ko-soft); }
+.grade-in.low { color: var(--ko); font-weight: 700; }
+.avg-cell { font-weight: 700; min-width: 70px; }
+.avg-cell.low { color: var(--ko); }
+.eval-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 16px; }
+.eval-form .grow { flex: 1 1 200px; }
+.eval-form input[type=number] { width: 80px; }
+
+/* Élèves */
+table.students { width: 100%; border-collapse: collapse; }
+table.students th { text-align: left; font-size: 13px; color: var(--muted); padding: 6px; border-bottom: 1px solid var(--line); }
+table.students td { padding: 3px 6px; border-bottom: 1px solid var(--line); }
+table.students input[type=text] { width: 100%; border-color: transparent; background: transparent; }
+table.students input[type=text]:hover { border-color: var(--line); }
+table.students input[type=text]:focus { border-color: var(--accent); background: var(--surface); }
+@media (max-width: 560px) { table.students th:nth-child(4), table.students td:nth-child(4), table.students th:nth-child(5), table.students td:nth-child(5) { display: none; } }
+.add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.add-row input { flex: 1 1 140px; min-width: 0; }
+
+/* Imprimer */
+.print-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .print-layout { grid-template-columns: minmax(0, 1fr); } }
+.doc-types { display: grid; gap: 6px; margin-bottom: 14px; }
+.doc-type { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: var(--surface); }
+.doc-type input { grid-row: span 2; margin-top: 4px; accent-color: var(--accent); }
+.doc-type b { font-size: 14px; }
+.doc-type span { font-size: 12px; color: var(--muted); }
+.doc-type:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.print-opts { display: grid; gap: 10px; }
+.print-opts .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.print-opts .row > * { flex: 1 1 120px; }
+.preview-wrap { background: var(--surface-2); border-radius: var(--radius); padding: 18px; overflow-x: auto; }
+.paper { background: #fff; color: #111; margin: 0 auto; padding: 14mm 12mm; box-shadow: 0 2px 10px rgba(20, 30, 60, 0.18); width: 210mm; max-width: none; min-height: 120mm; }
+.paper.landscape { width: 297mm; }
+.paper .page-break { border-top: 2px dashed #b8c0d0; margin: 12mm -12mm; height: 0; }
+
+/* Documents imprimés (même rendu à l'écran et sur papier) */
+.doc { font: 11pt/1.35 var(--font-body); color: #111; }
+.doc-head { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 10px; }
+.doc-head h1 { font-size: 17pt; font-family: var(--font-display); }
+.doc-school { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.06em; color: #444; }
+.doc-sub { font-size: 10pt; color: #333; margin-top: 2px; }
+.doc-meta { text-align: right; font-size: 9pt; color: #333; white-space: nowrap; }
+.doc table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.doc th, .doc td { border: 1px solid #555; padding: 3px 5px; }
+.doc th { background: #eceff4; font-size: 9pt; text-align: center; }
+.doc td.c { text-align: center; }
+.doc td.n { width: 26px; text-align: right; color: #444; }
+.doc td.nm { white-space: nowrap; }
+.doc th.nmh { width: 1%; white-space: nowrap; }
+.inline-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 700; }
+.doc .last { text-transform: uppercase; font-weight: 700; }
+.doc tbody tr:nth-child(even) td { background: #f6f7fa; }
+.doc .tall td { height: 26px; }
+.doc th.blank { height: 44px; min-width: 36px; }
+.doc .A { color: #b3261e; font-weight: 700; }
+.doc .R { color: #8a5600; font-weight: 700; }
+.doc .low { color: #b3261e; font-weight: 700; }
+.doc tfoot td { font-weight: 700; background: #eceff4; }
+.doc .foot { margin-top: 10px; font-size: 9pt; color: #444; display: flex; justify-content: space-between; gap: 12px; }
+.doc .summary { margin: 8px 0; font-size: 10pt; }
+.doc .appr { border: 1px solid #555; min-height: 34mm; padding: 6px; margin-top: 10px; }
+.doc .appr-lines { background: repeating-linear-gradient(180deg, transparent 0 7mm, #bbb 7mm calc(7mm + 1px)); height: 28mm; }
+.doc .big-avg { font-size: 14pt; font-weight: 700; }
+.doc .sign { display: flex; justify-content: space-between; margin-top: 12px; font-size: 10pt; }
+.doc th.vert { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 70px; padding: 4px 2px; font-weight: 400; }
+.doc-page + .doc-page { break-before: page; }
+
+#print-root { display: none; }
+@media print {
+  body { background: #fff; }
+  .app { display: none !important; }
+  #print-root { display: block !important; }
+  .doc tbody tr { break-inside: avoid; }
+  .doc th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .doc tbody tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Divers */
+.empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+.empty h2 { color: var(--fg); margin-bottom: 8px; }
+.toast { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-weight: 700; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.save-area { display: flex; align-items: center; gap: 8px; }
+.save-status { font-size: 12px; font-weight: 700; color: var(--ok); white-space: nowrap; }
+.save-status.err { color: var(--ko); }
+.storage-warn { background: var(--ko-soft); color: var(--ko); border-bottom: 1px solid var(--line); font-weight: 700; font-size: 14px;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); text-align: center; }
+.storage-warn button { margin-left: 8px; }
+/* Écran de verrouillage */
+body.locked .app { display: none !important; }
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; overflow-y: auto;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lock-box { margin: auto; width: min(320px, 100%); display: grid; gap: 18px; justify-items: center; text-align: center; }
+.lock-box .logo { width: 44px; height: 54px; }
+.lock-box h2 { font-size: 1.4rem; }
+.dots { display: flex; gap: 14px; height: 18px; }
+.dots span { display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); }
+.dots span.on { background: var(--accent); }
+.dots.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; }
+.keypad button { aspect-ratio: 1.3; max-width: 100%; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.5rem; font-weight: 700; cursor: pointer; }
+.keypad button:active { background: var(--accent-soft); }
+.keypad .soft { background: transparent; border-color: transparent; font-size: 1rem; color: var(--muted); }
+.lock-msg { min-height: 1.5em; color: var(--ko); font-weight: 700; }
+.forgot-confirm { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); width: 100%; }
+.forgot-confirm p { margin: 0; }
+.forgot-confirm .btn { justify-content: center; padding: 11px; }
+.link-btn { border: 0; background: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 13px; }
+.badge-ex { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--late-soft); color: var(--late); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-row">
+        <div class="brand"><div class="logo" aria-hidden="true"></div><h1>Cahier de classe</h1></div>
+        <div class="class-picker">
+          <label for="class-select" class="hint">Classe</label>
+          <select id="class-select"></select>
+          <button class="btn small" data-action="new-class" title="Créer une classe">+ Classe</button>
+        </div>
+        <div class="save-area">
+          <span id="save-status" class="save-status" aria-live="polite"></span>
+          <button class="btn small primary" data-action="export" title="Télécharger une copie de toutes tes données (fichier .json)">Sauvegarder une copie</button>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist" id="tabs"></nav>
+    </div>
+  </header>
+  <div class="storage-warn" id="storage-warn" hidden>Ce navigateur ne garde pas tes données quand tu fermes la page. Ouvre le fichier dans Chrome ou Safari, ou sauvegarde une copie avant de fermer.<button class="btn small" data-action="export">Sauvegarder une copie</button></div>
+  <main id="view"></main>
+</div>
+<div id="print-root"></div>
+<div class="lock" id="lock" hidden>
+  <div class="lock-box">
+    <div class="logo" aria-hidden="true"></div>
+    <h2>Cahier de classe</h2>
+    <p class="hint" style="margin:0" id="lock-hint">Tape ton code pour ouvrir</p>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="lock-msg" id="lock-msg" role="alert"></div>
+    <div class="keypad" id="keypad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <span></span><button data-k="0">0</button><button class="soft" data-k="del" aria-label="Effacer le dernier chiffre">Effacer</button>
+    </div>
+    <div id="forgot-box"><button class="link-btn" data-lock="forgot">Code oublié ?</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<input type="file" id="import-file" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+'use strict';
+const KEY = 'cahier-de-classe-v1';
+const TABS = [
+  { id: 'appel', label: 'Appel', key: '1' },
+  { id: 'notes', label: 'Notes', key: '2' },
+  { id: 'eleves', label: 'Élèves', key: '3' },
+  { id: 'imprimer', label: 'Imprimer', key: '4' },
+  { id: 'reglages', label: 'Réglages & sauvegarde', key: '5' },
+];
+const STATUS = { P: 'Présent', A: 'Absent', R: 'Retard' };
+const PERIODS = ['T1', 'T2', 'T3'];
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => isoDate(new Date());
+const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseISO(s); d.setDate(d.getDate() + n); return isoDate(d); };
+const frLong = s => parseISO(s).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const frShort = s => parseISO(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+const frMed = s => parseISO(s).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+const fmt = n => n == null || isNaN(n) ? '–' : n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function schoolYear() { const d = new Date(); const y = d.getFullYear(); return d.getMonth() >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`; }
+
+/* ---------- Données ---------- */
+let S;
+function defaults() {
+  return { settings: { school: '', teacher: '', year: schoolYear() }, classes: [], current: null, tab: 'appel',
+    appelDate: today(), period: 'all', print: { type: 'liste', orient: 'portrait', cols: 'Cahier, Signature', blankCols: 12, from: '', to: '', period: 'all', date: '', appr: true } };
+}
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); return Object.assign(defaults(), d, { print: Object.assign(defaults().print, d.print || {}) }); } } catch (e) {}
+  const d = defaults(); const c = sampleClass(); d.classes.push(c); d.current = c.id; return d;
+}
+let saveTimer;
+function storageWorks() { try { const k = KEY + '-test'; localStorage.setItem(k, '1'); const ok = localStorage.getItem(k) === '1'; localStorage.removeItem(k); return ok; } catch (e) { return false; } }
+function setStatus(ok) {
+  const el = $('#save-status'); if (!el) return;
+  const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  el.textContent = ok ? `✓ Enregistré à ${time}` : '✕ Non enregistré';
+  el.classList.toggle('err', !ok);
+  el.title = ok ? 'Tes données sont gardées dans ce navigateur. Elles seront là à la prochaine ouverture.' : 'Ce navigateur ne garde pas les données : sauvegarde une copie.';
+  $('#storage-warn').hidden = ok;
+}
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { let ok = false; try { localStorage.setItem(KEY, JSON.stringify(S)); ok = localStorage.getItem(KEY) != null; } catch (e) {} setStatus(ok); }, 150); }
+const cls = () => S.classes.find(c => c.id === S.current) || null;
+const sorted = c => [...c.students].sort((a, b) => a.last.localeCompare(b.last, 'fr', { sensitivity: 'base' }) || a.first.localeCompare(b.first, 'fr', { sensitivity: 'base' }));
+const fullName = s => `${s.last.toUpperCase()} ${s.first}`;
+
+function sampleClass() {
+  const names = [['Bernard','Lina'],['Martin','Hugo'],['Petit','Chloé'],['Durand','Nathan'],['Leroy','Inès'],['Moreau','Lucas'],['Simon','Jade'],['Laurent','Adam'],['Lefebvre','Léa'],['Michel','Raphaël'],['Garcia','Manon'],['David','Noah'],['Bertrand','Zoé'],['Roux','Gabriel'],['Vincent','Camille'],['Fournier','Louis'],['Morel','Emma'],['Girard','Sacha'],['André','Lou'],['Mercier','Yanis'],['Dupont','Rose'],['Lambert','Malo'],['Bonnet','Alice'],['Faure','Ethan']];
+  const students = names.map(([last, first]) => ({ id: uid(), last, first }));
+  const c = { id: uid(), name: '4e B (exemple)', sample: true, students, att: {}, evals: [], grades: {} };
+  // quelques jours d'appel passés
+  let d = today(), done = 0;
+  while (done < 6) { d = addDays(d, -1); const wd = parseISO(d).getDay(); if (wd === 0 || wd === 6 || wd === 3) continue;
+    const rec = {}; students.forEach((s, i) => { rec[s.id] = (i * 7 + done * 3) % 23 === 0 ? 'A' : (i * 5 + done) % 19 === 0 ? 'R' : 'P'; }); c.att[d] = rec; done++; }
+  const evs = [['Interrogation : fractions', -30, 10, 1], ['Devoir maison n°1', -21, 20, 1], ['Contrôle : proportionnalité', -9, 20, 2]];
+  evs.forEach(([title, off, max, coef], k) => { const e = { id: uid(), title, date: addDays(today(), off), max, coef, period: 'T1' }; c.evals.push(e);
+    c.grades[e.id] = {}; students.forEach((s, i) => { let v = Math.round(((i * 13 + k * 7) % 11 + 9) / 20 * max * 2) / 2; if (v > max) v = max;
+      c.grades[e.id][s.id] = (i === 4 && k === 1) ? 'ABS' : String(v).replace('.', ','); }); });
+  return c;
+}
+
+/* ---------- Notes : calculs ---------- */
+function parseGrade(v, max) {
+  const t = String(v ?? '').trim(); if (!t) return { empty: true };
+  const up = t.toUpperCase(); if (['ABS', 'DISP', 'NN', 'EXC'].includes(up)) return { code: up };
+  const n = Number(t.replace(',', '.')); if (isNaN(n) || n < 0 || n > max) return { bad: true };
+  return { n };
+}
+const evalsIn = (c, period) => c.evals.filter(e => period === 'all' || e.period === period).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+function studentAvg(c, sid, period) {
+  let sum = 0, w = 0;
+  evalsIn(c, period).forEach(e => { const g = parseGrade(c.grades[e.id]?.[sid], e.max); if (g.n != null) { sum += g.n / e.max * 20 * e.coef; w += e.coef; } });
+  return w ? sum / w : null;
+}
+function evalStats(c, e) {
+  const vals = c.students.map(s => parseGrade(c.grades[e.id]?.[s.id], e.max)).filter(g => g.n != null).map(g => g.n);
+  if (!vals.length) return { avg: null, min: null, max: null, count: 0 };
+  return { avg: vals.reduce((a, b) => a + b, 0) / vals.length, min: Math.min(...vals), max: Math.max(...vals), count: vals.length };
+}
+function attCounts(c, sid, from, to) {
+  let A = 0, R = 0; const dates = [];
+  Object.keys(c.att).forEach(d => { if ((from && d < from) || (to && d > to)) return; const v = c.att[d][sid]; if (v === 'A') { A++; dates.push(d); } if (v === 'R') R++; });
+  return { A, R, dates: dates.sort() };
+}
+
+/* ---------- Rendu général ---------- */
+function render() {
+  if (locked) return;
+  const sel = $('#class-select');
+  sel.innerHTML = S.classes.length ? S.classes.map(c => `<option value="${c.id}" ${c.id === S.current ? 'selected' : ''}>${esc(c.name)}</option>`).join('') : '<option>Aucune classe</option>';
+  sel.disabled = !S.classes.length;
+  $('#tabs').innerHTML = TABS.map(t => `<button class="tab" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}">${t.label}<kbd>${t.key}</kbd></button>`).join('');
+  const v = $('#view'); const c = cls();
+  if (!c && S.tab !== 'reglages') { v.innerHTML = `<div class="empty panel"><h2>Aucune classe pour l'instant</h2><p>Crée ta première classe pour faire l'appel et saisir des notes.</p><button class="btn primary" data-action="new-class">Créer une classe</button></div>`; return; }
+  ({ appel: renderAppel, notes: renderNotes, eleves: renderEleves, imprimer: renderImprimer, reglages: renderReglages })[S.tab](v, c);
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2200); }
+function sampleBanner(c) { return c.sample ? `<p class="hint" style="margin:0 0 12px"><span class="badge-ex">Exemple</span> Cette classe contient des élèves fictifs pour te montrer l'application. Supprime-la dans l'onglet Élèves quand tu as créé les tiennes.</p>` : ''; }
+
+/* ---------- Appel ---------- */
+function renderAppel(v, c) {
+  const d = S.appelDate; const rec = c.att[d] || {}; const st = sorted(c);
+  const hist = Object.keys(c.att).sort().reverse().slice(0, 12);
+  v.innerHTML = `${sampleBanner(c)}
+  <div class="toolbar">
+    <div class="date-nav">
+      <button class="btn icon" data-action="day" data-n="-1" title="Jour précédent">‹</button>
+      <input type="date" id="appel-date" value="${d}" aria-label="Date de l'appel">
+      <button class="btn icon" data-action="day" data-n="1" title="Jour suivant">›</button>
+      ${d !== today() ? `<button class="btn small ghost" data-action="day-today">Aujourd'hui</button>` : ''}
+    </div>
+    <div class="date-nav"><span class="date-label">${esc(frLong(d))}</span></div>
+    <div class="spacer"></div>
+    <button class="btn primary" data-action="all-present">Tous présents</button>
+    <button class="btn ghost" data-action="clear-appel">Effacer</button>
+  </div>
+  <div class="appel-layout">
+    <div>
+      <div class="toolbar" style="margin-bottom:10px"><div class="counts" id="counts"></div><div class="spacer"></div>
+      <span class="hint">Clavier : <b>P</b> présent · <b>A</b> absent · <b>R</b> retard · ↑ ↓ pour se déplacer</span></div>
+      <div class="roll" id="roll">${st.length ? st.map((s, i) => rollRow(c, s, i, rec[s.id])).join('') : `<div class="empty">Aucun élève dans cette classe. Ajoute-les dans l'onglet <b>Élèves</b>.</div>`}</div>
+    </div>
+    <aside class="panel">
+      <h2>Absents du jour</h2><div id="absent-box"></div>
+      <h2 style="margin-top:18px">Appels précédents</h2>
+      ${hist.length ? `<ul class="side-list">${hist.map(h => { const r = c.att[h]; const a = Object.values(r).filter(x => x === 'A').length; const rt = Object.values(r).filter(x => x === 'R').length;
+        return `<li><button data-action="goto-day" data-d="${h}" class="${h === d ? 'cur' : ''}"><span class="when">${esc(frMed(h))}</span><span class="hint num">${a} abs. · ${rt} ret.</span></button></li>`; }).join('')}</ul>` : '<p class="hint">Aucun appel enregistré.</p>'}
+    </aside>
+  </div>`;
+  updateCounts(c);
+}
+function rollRow(c, s, i, val) {
+  const a = attCounts(c, s.id);
+  return `<div class="roll-row ${val ? 'st-' + val : ''}" tabindex="0" data-sid="${s.id}">
+    <span class="roll-num num">${i + 1}</span>
+    <span class="roll-name"><span class="last">${esc(s.last)}</span> ${esc(s.first)}<span class="stat">${a.A} absence${a.A > 1 ? 's' : ''} · ${a.R} retard${a.R > 1 ? 's' : ''} cette année</span></span>
+    <span class="seg">${['P', 'A', 'R'].map(k => `<button class="${k} ${val === k ? 'on' : ''}" data-action="mark" data-v="${k}" title="${STATUS[k]} (${k})" aria-pressed="${val === k}">${k}</button>`).join('')}</span>
+  </div>`;
+}
+function mark(c, sid, val) {
+  const d = S.appelDate; c.att[d] = c.att[d] || {};
+  if (c.att[d][sid] === val) delete c.att[d][sid]; else c.att[d][sid] = val;
+  if (!Object.keys(c.att[d]).length) delete c.att[d];
+  save();
+  const row = $(`.roll-row[data-sid="${sid}"]`); if (!row) return;
+  const s = c.students.find(x => x.id === sid); const i = sorted(c).findIndex(x => x.id === sid);
+  const tmp = document.createElement('div'); tmp.innerHTML = rollRow(c, s, i, c.att[d]?.[sid]); const nr = tmp.firstElementChild;
+  row.replaceWith(nr); updateCounts(c); return nr;
+}
+function updateCounts(c) {
+  const rec = c.att[S.appelDate] || {}; const n = { P: 0, A: 0, R: 0 }; Object.values(rec).forEach(v => n[v]++);
+  const none = c.students.length - n.P - n.A - n.R;
+  const box = $('#counts'); if (box) box.innerHTML = `<span class="chip P">Présents <b class="num">${n.P}</b></span><span class="chip A">Absents <b class="num">${n.A}</b></span><span class="chip R">Retards <b class="num">${n.R}</b></span>${none ? `<span class="chip">Non pointés <b class="num">${none}</b></span>` : ''}`;
+  const ab = $('#absent-box'); if (ab) { const list = sorted(c).filter(s => rec[s.id] === 'A' || rec[s.id] === 'R');
+    ab.innerHTML = list.length ? `<ul class="absent-names">${list.map(s => `<li>${esc(fullName(s))} ${rec[s.id] === 'R' ? '<span class="hint">(retard)</span>' : ''}</li>`).join('')}</ul>` : `<p class="hint">${none === c.students.length ? "L'appel n'est pas encore fait." : 'Personne.'}</p>`; }
+}
+
+/* ---------- Notes ---------- */
+let editingEval = null; // null = fermé, 'new' ou id
+function renderNotes(v, c) {
+  const evs = evalsIn(c, S.period); const st = sorted(c);
+  const e = editingEval && editingEval !== 'new' ? c.evals.find(x => x.id === editingEval) : null;
+  v.innerHTML = `${sampleBanner(c)}
+  <div class="toolbar">
+    <label class="inline-field">Période
+      <select id="period-select">${[['all', "Toute l'année"], ...PERIODS.map(p => [p, 'Trimestre ' + p[1]])].map(([k, l]) => `<option value="${k}" ${S.period === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="spacer"></div>
+    <span class="hint">Entrée : élève suivant · codes acceptés : ABS, DISP, NN</span>
+    <button class="btn primary" data-action="eval-new">+ Nouvelle évaluation</button>
+  </div>
+  ${editingEval ? `<form class="panel eval-form" id="eval-form">
+    <label class="field grow">Titre<input type="text" id="ev-title" required value="${esc(e?.title || '')}" placeholder="Ex : Contrôle chapitre 3"></label>
+    <label class="field">Date<input type="date" id="ev-date" value="${e?.date || today()}"></label>
+    <label class="field">Noté sur<input type="number" id="ev-max" min="1" step="1" value="${e?.max ?? 20}"></label>
+    <label class="field">Coefficient<input type="number" id="ev-coef" min="0" step="0.5" value="${e?.coef ?? 1}"></label>
+    <label class="field">Période<select id="ev-period">${PERIODS.map(p => `<option ${(e?.period || (S.period !== 'all' ? S.period : currentTrim())) === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+    <button class="btn primary" type="submit">${e ? 'Enregistrer' : 'Ajouter'}</button>
+    <button class="btn ghost" type="button" data-action="eval-cancel">Annuler</button>
+  </form>` : ''}
+  ${!st.length ? `<div class="empty panel">Ajoute d'abord des élèves dans l'onglet <b>Élèves</b>.</div>` :
+  !evs.length ? `<div class="empty panel"><h2>Aucune évaluation${S.period !== 'all' ? ' sur cette période' : ''}</h2><p>Crée une évaluation pour saisir les notes de la classe.</p></div>` :
+  `<div class="table-wrap"><table class="grades">
+    <thead><tr><th class="name-col">Élève</th>${evs.map(e => `<th><div class="eval-head"><span class="t">${esc(e.title)}</span>
+      <span class="m">${e.date ? frShort(e.date) : ''} · /${e.max}${e.coef !== 1 ? ' · coef ' + String(e.coef).replace('.', ',') : ''} · ${e.period}</span>
+      <span class="acts"><button class="btn icon small ghost" data-action="eval-edit" data-eid="${e.id}" title="Modifier">✎</button><button class="btn icon small ghost danger" data-action="eval-del" data-eid="${e.id}" title="Supprimer">✕</button></span></div></th>`).join('')}
+      <th>Moyenne<br><span class="hint">/20</span></th></tr></thead>
+    <tbody>${st.map((s, r) => `<tr><td class="name-col"><span style="font-weight:700;text-transform:uppercase">${esc(s.last)}</span> ${esc(s.first)}</td>
+      ${evs.map((e, k) => { const val = c.grades[e.id]?.[s.id] ?? ''; return `<td><input class="grade-in ${gradeClass(val, e.max)}" data-eid="${e.id}" data-sid="${s.id}" data-r="${r}" data-c="${k}" value="${esc(val)}" inputmode="decimal" aria-label="${esc(s.first + ' ' + s.last + ', ' + e.title)}"></td>`; }).join('')}
+      <td class="avg-cell num" data-avg="${s.id}"></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="name-col">Moyenne de classe</td>${evs.map(e => `<td class="num" data-estat="${e.id}"></td>`).join('')}<td class="num" id="class-avg"></td></tr></tfoot>
+  </table></div>`}`;
+  updateAverages(c);
+  if (editingEval) $('#ev-title').focus();
+}
+function currentTrim() { const m = new Date().getMonth(); return m >= 8 && m <= 11 ? 'T1' : m <= 2 ? 'T2' : 'T3'; }
+function gradeClass(val, max) { const g = parseGrade(val, max); return g.bad ? 'bad' : g.n != null && g.n / max * 20 < 10 ? 'low' : ''; }
+function updateAverages(c) {
+  const evs = evalsIn(c, S.period); const avgs = [];
+  $$('[data-avg]').forEach(td => { const a = studentAvg(c, td.dataset.avg, S.period); if (a != null) avgs.push(a); td.textContent = fmt(a); td.classList.toggle('low', a != null && a < 10); });
+  evs.forEach(e => { const td = $(`[data-estat="${e.id}"]`); if (!td) return; const s = evalStats(c, e);
+    td.innerHTML = s.count ? `${fmt(s.avg)}<br><span class="hint" style="font-weight:400">${fmt(s.min)} – ${fmt(s.max)}</span>` : '–'; });
+  const ca = $('#class-avg'); if (ca) ca.textContent = avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–';
+}
+
+/* ---------- Élèves ---------- */
+let confirmDelClass = false;
+function renderEleves(v, c) {
+  const st = sorted(c);
+  v.innerHTML = `${sampleBanner(c)}<div class="grid-2">
+  <section class="panel">
+    <h2>${esc(c.name)} · <span class="num">${c.students.length}</span> élève${c.students.length > 1 ? 's' : ''}</h2>
+    <form class="add-row" id="add-student">
+      <input type="text" id="new-last" placeholder="Nom" required aria-label="Nom">
+      <input type="text" id="new-first" placeholder="Prénom" aria-label="Prénom">
+      <button class="btn primary" type="submit">Ajouter</button>
+    </form>
+    ${st.length ? `<table class="students"><thead><tr><th>N°</th><th>Nom</th><th>Prénom</th><th class="num">Abs.</th><th class="num">Moy.</th><th></th></tr></thead><tbody>
+    ${st.map((s, i) => { const a = attCounts(c, s.id); const m = studentAvg(c, s.id, 'all'); return `<tr>
+      <td class="hint num">${i + 1}</td>
+      <td><input type="text" data-edit="last" data-sid="${s.id}" value="${esc(s.last)}" aria-label="Nom"></td>
+      <td><input type="text" data-edit="first" data-sid="${s.id}" value="${esc(s.first)}" aria-label="Prénom"></td>
+      <td class="num">${a.A}</td><td class="num">${fmt(m)}</td>
+      <td><button class="btn icon small ghost danger" data-action="del-student" data-sid="${s.id}" title="Retirer l'élève">✕</button></td></tr>`; }).join('')}
+    </tbody></table>` : '<p class="hint">Aucun élève. Ajoute-les un par un ou colle une liste à droite.</p>'}
+  </section>
+  <div style="display:grid;gap:16px;align-content:start">
+    <section class="panel">
+      <h2>Importer une liste</h2>
+      <p class="hint" style="margin-top:0">Colle un élève par ligne, par exemple <b>DUPONT Marie</b>, <b>Dupont;Marie</b> ou une copie depuis un tableur (Nom ⇥ Prénom).</p>
+      <textarea id="bulk" placeholder="DUPONT Marie&#10;MARTIN Lucas&#10;LEGRAND Jean-Pierre"></textarea>
+      <div class="toolbar" style="margin:10px 0 0"><button class="btn primary" data-action="bulk-import">Importer les élèves</button></div>
+    </section>
+    <section class="panel">
+      <h2>Classe</h2>
+      <label class="field">Nom de la classe<input type="text" id="class-name" value="${esc(c.name)}"></label>
+      <div class="toolbar" style="margin:14px 0 0">
+        ${confirmDelClass ? `<span>Supprimer <b>${esc(c.name)}</b>, ses appels et ses notes ?</span><button class="btn danger" data-action="del-class-yes">Oui, supprimer</button><button class="btn ghost" data-action="del-class-no">Annuler</button>`
+        : `<button class="btn danger" data-action="del-class">Supprimer la classe</button>`}
+      </div>
+    </section>
+  </div></div>`;
+}
+function parseLine(line) {
+  const t = line.trim(); if (!t) return null;
+  let parts = t.split(/\t|;|,/).map(x => x.trim()).filter(Boolean);
+  if (parts.length >= 2) return { last: parts[0], first: parts.slice(1).join(' ') };
+  const words = t.split(/\s+/);
+  const upper = words.filter(w => w.length > 1 && w === w.toUpperCase() && /\p{L}/u.test(w));
+  if (upper.length && upper.length < words.length) return { last: upper.join(' '), first: words.filter(w => !upper.includes(w)).join(' ') };
+  return { last: words[0], first: words.slice(1).join(' ') };
+}
+const cap = s => s.toLowerCase().replace(/(^|[\s'\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+/* ---------- Imprimer ---------- */
+const DOCS = [
+  { id: 'liste', label: "Liste d'élèves", desc: 'Liste numérotée, avec colonnes libres', orient: 'portrait' },
+  { id: 'presence', label: 'Feuille de présence', desc: 'Grille vierge ou remplie avec les appels', orient: 'landscape' },
+  { id: 'appel', label: "Feuille d'appel du jour", desc: "Résultat de l'appel d'une date", orient: 'portrait' },
+  { id: 'notes', label: 'Relevé de notes de la classe', desc: 'Toutes les notes et moyennes', orient: 'landscape' },
+  { id: 'bulletin', label: 'Relevés individuels', desc: 'Une page par élève, à distribuer', orient: 'portrait' },
+  { id: 'absences', label: 'Bilan des absences', desc: 'Absences et retards par élève', orient: 'portrait' },
+];
+function renderImprimer(v, c) {
+  const P = S.print; const dates = Object.keys(c.att).sort();
+  if (!P.from) P.from = dates[0] || today(); if (!P.to) P.to = today(); if (!P.date) P.date = S.appelDate;
+  const opts = {
+    liste: `<label class="field">Colonnes à ajouter (séparées par des virgules)<input type="text" id="po-cols" value="${esc(P.cols)}" placeholder="Ex : Cahier, Signature, Remarques"></label>`,
+    presence: `<label class="field">Contenu<select id="po-mode"><option value="blank" ${P.mode !== 'filled' ? 'selected' : ''}>Grille vierge à remplir</option><option value="filled" ${P.mode === 'filled' ? 'selected' : ''}>Remplie avec les appels enregistrés</option></select></label>
+      ${P.mode === 'filled' ? `<div class="row"><label class="field">Du<input type="date" id="po-from" value="${P.from}"></label><label class="field">Au<input type="date" id="po-to" value="${P.to}"></label></div>`
+      : `<label class="field">Nombre de colonnes de dates<input type="number" id="po-blank" min="1" max="31" value="${P.blankCols}"></label>`}`,
+    appel: `<label class="field">Date<input type="date" id="po-date" value="${P.date}"></label>`,
+    notes: periodSel(P), bulletin: periodSel(P) + `<label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="po-appr" ${P.appr ? 'checked' : ''}> Cadre d'appréciation</label>`,
+    absences: `<div class="row"><label class="field">Du<input type="date" id="po-from" value="${P.from}"></label><label class="field">Au<input type="date" id="po-to" value="${P.to}"></label></div>`,
+  };
+  v.innerHTML = `<div class="print-layout">
+    <aside class="panel">
+      <h2>Que veux-tu imprimer ?</h2>
+      <div class="doc-types">${DOCS.map(d => `<label class="doc-type"><input type="radio" name="doctype" value="${d.id}" ${P.type === d.id ? 'checked' : ''}><b>${d.label}</b><span>${d.desc}</span></label>`).join('')}</div>
+      <div class="print-opts">${opts[P.type]}
+        <label class="field">Orientation<select id="po-orient"><option value="portrait" ${P.orient === 'portrait' ? 'selected' : ''}>Portrait</option><option value="landscape" ${P.orient === 'landscape' ? 'selected' : ''}>Paysage</option></select></label>
+        <button class="btn primary" data-action="print" style="justify-content:center;padding:11px">Imprimer</button>
+        <p class="hint" style="margin:0">Dans la fenêtre d'impression, choisis « Enregistrer en PDF » pour obtenir un fichier.</p>
+      </div>
+    </aside>
+    <section class="preview-wrap" aria-label="Aperçu"><div class="paper ${P.orient === 'landscape' ? 'landscape' : ''}" id="paper"></div></section>
+  </div>`;
+  $('#paper').innerHTML = buildDoc(c).replace(/<\/section><section class="doc doc-page">/g, '</section><div class="page-break"></div><section class="doc doc-page">');
+}
+function periodSel(P) { return `<label class="field">Période<select id="po-period">${[['all', "Toute l'année"], ...PERIODS.map(p => [p, 'Trimestre ' + p[1]])].map(([k, l]) => `<option value="${k}" ${P.period === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`; }
+const periodLabel = p => p === 'all' ? "Toute l'année" : 'Trimestre ' + p[1];
+function head(c, title, sub) {
+  const st = S.settings;
+  return `<div class="doc-head"><div>${st.school ? `<div class="doc-school">${esc(st.school)}</div>` : ''}<h1>${esc(title)}</h1><div class="doc-sub">Classe : <b>${esc(c.name)}</b>${sub ? ' · ' + sub : ''}</div></div>
+  <div class="doc-meta">${st.teacher ? esc(st.teacher) + '<br>' : ''}Année ${esc(st.year)}<br>Imprimé le ${new Date().toLocaleDateString('fr-FR')}</div></div>`;
+}
+const nameCells = s => `<td class="nm"><span class="last">${esc(s.last)}</span> ${esc(s.first)}</td>`;
+function buildDoc(c) {
+  const P = S.print; const st = sorted(c);
+  const page = inner => `<section class="doc doc-page">${inner}</section>`;
+  switch (P.type) {
+    case 'liste': {
+      const cols = P.cols.split(',').map(x => x.trim()).filter(Boolean);
+      return page(`${head(c, "Liste des élèves", `${st.length} élèves`)}<table class="tall"><thead><tr><th>N°</th><th>Nom</th><th>Prénom</th>${cols.map(x => `<th>${esc(x)}</th>`).join('')}</tr></thead>
+        <tbody>${st.map((s, i) => `<tr><td class="n">${i + 1}</td><td class="last">${esc(s.last)}</td><td>${esc(s.first)}</td>${cols.map(() => '<td></td>').join('')}</tr>`).join('')}</tbody></table>`);
+    }
+    case 'presence': {
+      if (P.mode === 'filled') {
+        const ds = Object.keys(c.att).filter(d => d >= P.from && d <= P.to).sort();
+        if (!ds.length) return page(`${head(c, 'Feuille de présence')}<p>Aucun appel enregistré entre le ${frShort(P.from)} et le ${frShort(P.to)}.</p>`);
+        return page(`${head(c, 'Feuille de présence', `du ${parseISO(P.from).toLocaleDateString('fr-FR')} au ${parseISO(P.to).toLocaleDateString('fr-FR')}`)}
+        <table><thead><tr><th>N°</th><th class="nmh">Élève</th>${ds.map(d => `<th class="vert">${esc(frMed(d))}</th>`).join('')}<th>Abs.</th><th>Ret.</th></tr></thead>
+        <tbody>${st.map((s, i) => { let a = 0, r = 0; const cells = ds.map(d => { const v = c.att[d][s.id]; if (v === 'A') a++; if (v === 'R') r++; return `<td class="c ${v || ''}">${v === 'P' ? '·' : v || ''}</td>`; }).join('');
+          return `<tr><td class="n">${i + 1}</td>${nameCells(s)}${cells}<td class="c">${a || ''}</td><td class="c">${r || ''}</td></tr>`; }).join('')}</tbody></table>
+        <div class="foot"><span>· présent &nbsp; A absent &nbsp; R retard</span><span>${ds.length} séance${ds.length > 1 ? 's' : ''}</span></div>`);
+      }
+      const n = Math.max(1, Math.min(31, +P.blankCols || 10));
+      return page(`${head(c, 'Feuille de présence', 'Mois : ....................')}<table class="tall"><thead><tr><th>N°</th><th class="nmh">Élève</th>${Array.from({ length: n }, () => '<th class="blank"></th>').join('')}</tr></thead>
+        <tbody>${st.map((s, i) => `<tr><td class="n">${i + 1}</td>${nameCells(s)}${Array.from({ length: n }, () => '<td></td>').join('')}</tr>`).join('')}</tbody></table>
+        <div class="foot"><span>Inscrire la date en tête de colonne · A = absent, R = retard</span><span>Signature :</span></div>`);
+    }
+    case 'appel': {
+      const rec = c.att[P.date] || {}; const n = { P: 0, A: 0, R: 0 }; Object.values(rec).forEach(v => n[v]++);
+      const abs = st.filter(s => rec[s.id] === 'A'), late = st.filter(s => rec[s.id] === 'R');
+      return page(`${head(c, "Feuille d'appel", esc(frLong(P.date)))}
+        <p class="summary"><b>${n.P}</b> présents · <b>${n.A}</b> absents · <b>${n.R}</b> retards${!Object.keys(rec).length ? ' · <i>appel non effectué pour cette date</i>' : ''}</p>
+        ${abs.length ? `<p class="summary"><b>Absents :</b> ${abs.map(fullName).map(esc).join(', ')}</p>` : ''}
+        ${late.length ? `<p class="summary"><b>En retard :</b> ${late.map(fullName).map(esc).join(', ')}</p>` : ''}
+        <table class="tall"><thead><tr><th>N°</th><th>Nom</th><th>Prénom</th><th>Statut</th><th>Observation</th></tr></thead>
+        <tbody>${st.map((s, i) => { const v = rec[s.id]; return `<tr><td class="n">${i + 1}</td><td class="last">${esc(s.last)}</td><td>${esc(s.first)}</td><td class="c ${v || ''}">${v ? STATUS[v] : ''}</td><td style="width:35%"></td></tr>`; }).join('')}</tbody></table>
+        <div class="sign"><span>Enseignant : ${esc(S.settings.teacher)}</span><span>Signature :</span></div>`);
+    }
+    case 'notes': {
+      const evs = evalsIn(c, P.period); if (!evs.length) return page(`${head(c, 'Relevé de notes', periodLabel(P.period))}<p>Aucune évaluation sur cette période.</p>`);
+      const avgs = st.map(s => studentAvg(c, s.id, P.period)).filter(a => a != null);
+      return page(`${head(c, 'Relevé de notes', periodLabel(P.period))}<table><thead><tr><th>N°</th><th class="nmh">Élève</th>${evs.map(e => `<th>${esc(e.title)}<br><span style="font-weight:400">${e.date ? frShort(e.date) : ''} · /${e.max}${e.coef !== 1 ? ' · c.' + String(e.coef).replace('.', ',') : ''}</span></th>`).join('')}<th>Moy.<br>/20</th></tr></thead>
+        <tbody>${st.map((s, i) => { const a = studentAvg(c, s.id, P.period); return `<tr><td class="n">${i + 1}</td>${nameCells(s)}${evs.map(e => { const v = c.grades[e.id]?.[s.id] ?? ''; const g = parseGrade(v, e.max); return `<td class="c ${g.n != null && g.n / e.max < .5 ? 'low' : ''}">${esc(v)}</td>`; }).join('')}<td class="c ${a != null && a < 10 ? 'low' : ''}"><b>${fmt(a)}</b></td></tr>`; }).join('')}</tbody>
+        <tfoot><tr><td></td><td>Moyenne de classe</td>${evs.map(e => `<td class="c">${fmt(evalStats(c, e).avg)}</td>`).join('')}<td class="c">${avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–'}</td></tr></tfoot></table>`);
+    }
+    case 'bulletin': {
+      const evs = evalsIn(c, P.period);
+      return st.map(s => { const a = studentAvg(c, s.id, P.period); const at = attCounts(c, s.id);
+        return page(`${head(c, 'Relevé de notes individuel', periodLabel(P.period))}
+        <p style="font-size:13pt;margin:4px 0 10px">Élève : <span class="last">${esc(s.last)}</span> <b>${esc(s.first)}</b></p>
+        ${evs.length ? `<table><thead><tr><th style="text-align:left">Évaluation</th><th>Date</th><th>Note</th><th>Coef.</th><th>Sur 20</th><th>Moy. classe</th></tr></thead>
+        <tbody>${evs.map(e => { const v = c.grades[e.id]?.[s.id] ?? ''; const g = parseGrade(v, e.max); const es = evalStats(c, e);
+          return `<tr><td>${esc(e.title)}</td><td class="c">${e.date ? frShort(e.date) : ''}</td><td class="c">${v ? esc(v) + ' / ' + e.max : '–'}</td><td class="c">${String(e.coef).replace('.', ',')}</td><td class="c ${g.n != null && g.n / e.max < .5 ? 'low' : ''}">${g.n != null ? fmt(g.n / e.max * 20) : '–'}</td><td class="c">${es.avg != null ? fmt(es.avg / e.max * 20) : '–'}</td></tr>`; }).join('')}</tbody></table>` : '<p>Aucune évaluation sur cette période.</p>'}
+        <p class="summary" style="margin-top:12px">Moyenne : <span class="big-avg ${a != null && a < 10 ? 'low' : ''}">${fmt(a)} / 20</span> &nbsp;·&nbsp; Absences sur l'année : <b>${at.A}</b> · Retards : <b>${at.R}</b></p>
+        ${P.appr ? `<div class="appr"><b>Appréciation</b><div class="appr-lines"></div></div><div class="sign"><span>Signature de l'enseignant</span><span>Signature des responsables légaux</span></div>` : ''}`); }).join('');
+    }
+    case 'absences': {
+      const rows = st.map(s => ({ s, ...attCounts(c, s.id, P.from, P.to) }));
+      const nb = Object.keys(c.att).filter(d => d >= P.from && d <= P.to).length;
+      return page(`${head(c, 'Bilan des absences', `du ${parseISO(P.from).toLocaleDateString('fr-FR')} au ${parseISO(P.to).toLocaleDateString('fr-FR')} · ${nb} séance${nb > 1 ? 's' : ''}`)}
+        <table><thead><tr><th>N°</th><th class="nmh">Élève</th><th>Absences</th><th>Retards</th><th style="text-align:left">Dates d'absence</th></tr></thead>
+        <tbody>${rows.map((r, i) => `<tr><td class="n">${i + 1}</td>${nameCells(r.s)}<td class="c ${r.A ? 'A' : ''}">${r.A}</td><td class="c ${r.R ? 'R' : ''}">${r.R}</td><td>${r.dates.map(frShort).join(', ')}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td></td><td>Total</td><td class="c">${rows.reduce((a, r) => a + r.A, 0)}</td><td class="c">${rows.reduce((a, r) => a + r.R, 0)}</td><td></td></tr></tfoot></table>`);
+    }
+  }
+  return '';
+}
+function doPrint() {
+  const c = cls(); if (!c) return;
+  $('#page-style').textContent = `@page { size: A4 ${S.print.orient}; margin: 12mm; }`;
+  $('#print-root').innerHTML = buildDoc(c);
+  window.print();
+}
+
+/* ---------- Réglages ---------- */
+function renderReglages(v) {
+  const st = S.settings;
+  v.innerHTML = `<div class="grid-2">
+  <section class="panel"><h2>En-tête des documents imprimés</h2>
+    <div style="display:grid;gap:12px">
+      <label class="field">Établissement<input type="text" id="set-school" value="${esc(st.school)}" placeholder="Ex : Collège Jean Moulin"></label>
+      <label class="field">Enseignant<input type="text" id="set-teacher" value="${esc(st.teacher)}" placeholder="Ex : Mme Martin — Mathématiques"></label>
+      <label class="field">Année scolaire<input type="text" id="set-year" value="${esc(st.year)}"></label>
+    </div></section>
+  <section class="panel"><h2>Sauvegarde</h2>
+    <p style="margin-top:0">Tes données sont enregistrées automatiquement <b>dans ce navigateur, sur cet ordinateur</b>. Elles ne sont envoyées nulle part.</p>
+    <p class="hint">Exporte régulièrement une copie (fichier .json) : elle te protège si tu vides l'historique du navigateur, et permet de passer tes classes sur un autre ordinateur.</p>
+    <div class="toolbar"><button class="btn primary" data-action="export">Exporter une copie</button><button class="btn" data-action="import">Importer une copie</button></div>
+    <p class="hint">Dernière copie : <b>${S.lastExport ? new Date(S.lastExport).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) : 'jamais'}</b></p>
+    <p class="hint">Pour retrouver tes données (nouvel ordinateur, navigateur vidé) : « Importer une copie » puis choisis le fichier .json. Importer remplace toutes les données actuelles par celles du fichier.</p>
+    <p class="hint">Le fichier de copie n'est pas chiffré : range-le dans un endroit protégé (ton Drive ou ton ordinateur personnel), pas sur un poste partagé.</p>
+  </section>
+  <section class="panel"><h2>Code de verrouillage</h2>
+    ${st.pinHash ? `<p style="margin-top:0"><span class="chip P">Activé</span> Le code est demandé à chaque ouverture et après 2 minutes sans utiliser l'application.</p>
+      <div class="toolbar"><button class="btn primary" data-action="lock-now">Verrouiller maintenant</button></div>
+      <form class="add-row" id="pin-off-form"><input type="password" inputmode="numeric" autocomplete="off" id="pin-cur" placeholder="Code actuel" aria-label="Code actuel"><button class="btn danger" type="submit">Désactiver le code</button></form>`
+    : `<p style="margin-top:0">Protège l'accès à tes classes avec un code de 4 à 6 chiffres. Conseillé sur un téléphone.</p>
+      <form class="add-row" id="pin-form"><input type="password" inputmode="numeric" autocomplete="off" maxlength="6" id="pin1" placeholder="Nouveau code" aria-label="Nouveau code"><input type="password" inputmode="numeric" autocomplete="off" maxlength="6" id="pin2" placeholder="Confirmer le code" aria-label="Confirmer le code"><button class="btn primary" type="submit">Activer</button></form>`}
+    <p class="hint">Le code empêche une autre personne qui a ton appareil en main d'ouvrir l'application. Garde aussi le verrouillage de ton téléphone activé.</p>
+  </section></div>`;
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cahier-de-classe-${today()}.json`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000); S.lastExport = new Date().toISOString(); save(); if (S.tab === 'reglages') render(); toast('Copie enregistrée dans tes Téléchargements');
+}
+
+/* ---------- Code de verrouillage ---------- */
+async function hashPin(pin, salt) {
+  const str = salt + ':' + pin;
+  try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h = 2166136261; for (let i = 0; i < 2000; i++) for (const ch of str) { h ^= ch.charCodeAt(0) + i; h = Math.imul(h, 16777619) >>> 0; } return 'f' + h.toString(16); }
+}
+let entry = '', locked = false, hiddenAt = 0;
+function lock() {
+  if (!S.settings.pinHash) return;
+  locked = true; entry = ''; document.body.classList.add('locked'); $('#view').innerHTML = ''; $('#print-root').innerHTML = '';
+  $('#lock').hidden = false; $('#lock-msg').textContent = '';
+  showForgot(false);
+  drawDots();
+}
+function showForgot(on) {
+  $('#keypad').hidden = on; $('#dots').hidden = on; $('#lock-msg').textContent = ''; $('#lock-hint').hidden = on;
+  $('#forgot-box').innerHTML = on ? `<div class="forgot-confirm">
+      <p><b>Code oublié ?</b></p>
+      <p class="hint">Sans le code, la seule solution est d'effacer toutes les données de cet appareil. Tu pourras ensuite réimporter une copie sauvegardée.</p>
+      <button class="btn primary" style="background:var(--ko);border-color:var(--ko)" data-lock="wipe">Tout effacer sur cet appareil</button>
+      <button class="btn ghost" data-lock="cancel">Annuler, je retape mon code</button></div>`
+    : '<button class="link-btn" data-lock="forgot">Code oublié ?</button>';
+  const first = $('#forgot-box button'); if (first) { first.scrollIntoView({ block: 'nearest' }); if (on) first.focus(); }
+}
+function unlock() { showForgot(false); locked = false; entry = ''; document.body.classList.remove('locked'); $('#lock').hidden = true; render(); }
+function drawDots() { const n = S.settings.pinLen || 4; $('#dots').innerHTML = Array.from({ length: n }, (_, i) => `<span class="${i < entry.length ? 'on' : ''}"></span>`).join(''); }
+async function pressKey(k) {
+  if (k === 'del') entry = entry.slice(0, -1);
+  else if (/^\d$/.test(k) && entry.length < (S.settings.pinLen || 4)) entry += k;
+  drawDots();
+  if (entry.length === (S.settings.pinLen || 4)) {
+    const h = await hashPin(entry, S.settings.pinSalt);
+    if (h === S.settings.pinHash) unlock();
+    else { entry = ''; const d = $('#dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); $('#lock-msg').textContent = 'Code incorrect'; setTimeout(drawDots, 350); }
+  }
+}
+document.addEventListener('click', e => {
+  const k = e.target.closest('#keypad [data-k]'); if (k) { pressKey(k.dataset.k); return; }
+  const l = e.target.closest('[data-lock]'); if (!l) return;
+  if (l.dataset.lock === 'forgot') showForgot(true);
+  if (l.dataset.lock === 'cancel') showForgot(false);
+  if (l.dataset.lock === 'wipe') { try { localStorage.removeItem(KEY); } catch (err) {} S = defaults(); save(); unlock(); toast('Données effacées sur cet appareil'); }
+}, true);
+window.addEventListener('keydown', e => {
+  if (!locked) return;
+  e.stopPropagation(); if (e.target.tagName === 'INPUT') return;
+  if (/^\d$/.test(e.key)) pressKey(e.key); else if (e.key === 'Backspace') pressKey('del');
+}, true);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (S.settings.pinHash && !locked && hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) lock();
+});
+
+/* ---------- Événements ---------- */
+document.addEventListener('click', e => {
+  const tabBtn = e.target.closest('[data-tab]'); if (tabBtn) { S.tab = tabBtn.dataset.tab; editingEval = null; confirmDelClass = false; save(); render(); return; }
+  const b = e.target.closest('[data-action]'); if (!b) return;
+  const c = cls(); const a = b.dataset.action;
+  switch (a) {
+    case 'new-class': { const n = S.classes.length + 1; const nc = { id: uid(), name: `Nouvelle classe ${n}`, students: [], att: {}, evals: [], grades: {} };
+      S.classes.push(nc); S.current = nc.id; S.tab = 'eleves'; save(); render(); const inp = $('#class-name'); inp.focus(); inp.select(); toast('Classe créée : donne-lui un nom et ajoute les élèves'); break; }
+    case 'day': S.appelDate = addDays(S.appelDate, +b.dataset.n); save(); render(); break;
+    case 'day-today': S.appelDate = today(); save(); render(); break;
+    case 'goto-day': S.appelDate = b.dataset.d; save(); render(); break;
+    case 'mark': { const row = b.closest('.roll-row'); mark(c, row.dataset.sid, b.dataset.v); break; }
+    case 'all-present': { const d = S.appelDate; c.att[d] = c.att[d] || {}; c.students.forEach(s => { if (!c.att[d][s.id]) c.att[d][s.id] = 'P'; }); save(); render(); toast('Élèves non pointés marqués présents'); break; }
+    case 'clear-appel': delete c.att[S.appelDate]; save(); render(); toast("Appel du jour effacé"); break;
+    case 'eval-new': editingEval = 'new'; render(); break;
+    case 'eval-edit': editingEval = b.dataset.eid; render(); break;
+    case 'eval-cancel': editingEval = null; render(); break;
+    case 'eval-del': { const ev = c.evals.find(x => x.id === b.dataset.eid);
+      if (b.dataset.sure) { c.evals = c.evals.filter(x => x.id !== ev.id); delete c.grades[ev.id]; save(); render(); toast('Évaluation supprimée'); }
+      else { b.dataset.sure = '1'; b.textContent = 'Sûr ?'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = '✕'; } }, 3000); } break; }
+    case 'del-student': { const s = c.students.find(x => x.id === b.dataset.sid);
+      if (b.dataset.sure) { c.students = c.students.filter(x => x.id !== s.id); save(); render(); toast(`${s.first} ${s.last} retiré de la classe`); }
+      else { b.dataset.sure = '1'; b.textContent = 'Retirer ?'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = '✕'; } }, 3000); } break; }
+    case 'bulk-import': { const lines = $('#bulk').value.split(/\r?\n/).map(parseLine).filter(Boolean);
+      if (!lines.length) { toast('Colle au moins un nom'); break; }
+      lines.forEach(l => c.students.push({ id: uid(), last: l.last, first: cap(l.first) }));
+      save(); render(); toast(`${lines.length} élève${lines.length > 1 ? 's' : ''} importé${lines.length > 1 ? 's' : ''}`); break; }
+    case 'del-class': confirmDelClass = true; render(); break;
+    case 'del-class-no': confirmDelClass = false; render(); break;
+    case 'del-class-yes': S.classes = S.classes.filter(x => x.id !== c.id); S.current = S.classes[0]?.id || null; confirmDelClass = false; S.tab = S.classes.length ? 'eleves' : 'appel'; save(); render(); toast('Classe supprimée'); break;
+    case 'print': doPrint(); break;
+    case 'export': exportData(); break;
+    case 'lock-now': lock(); break;
+    case 'import': $('#import-file').click(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target; const c = cls();
+  if (t.id === 'class-select') { S.current = t.value; editingEval = null; confirmDelClass = false; save(); render(); return; }
+  if (t.id === 'appel-date' && t.value) { S.appelDate = t.value; save(); render(); return; }
+  if (t.id === 'period-select') { S.period = t.value; save(); render(); return; }
+  if (t.id === 'class-name') { c.name = t.value.trim() || c.name; delete c.sample; save(); render(); return; }
+  if (t.dataset.edit) { const s = c.students.find(x => x.id === t.dataset.sid); const val = t.value.trim(); if (val) s[t.dataset.edit] = val; else t.value = s[t.dataset.edit]; save(); return; }
+  if (t.name === 'doctype') { S.print.type = t.value; S.print.orient = DOCS.find(d => d.id === t.value).orient; save(); render(); return; }
+  const map = { 'po-cols': 'cols', 'po-mode': 'mode', 'po-from': 'from', 'po-to': 'to', 'po-blank': 'blankCols', 'po-date': 'date', 'po-period': 'period', 'po-orient': 'orient' };
+  if (map[t.id]) { S.print[map[t.id]] = t.value; save(); render(); return; }
+  if (t.id === 'po-appr') { S.print.appr = t.checked; save(); render(); return; }
+  if (t.id.startsWith('set-')) { S.settings[t.id.slice(4)] = t.value; save(); toast('Enregistré'); return; }
+  if (t.id === 'import-file' && t.files[0]) {
+    const r = new FileReader(); r.onload = () => { try { const d = JSON.parse(r.result); if (!Array.isArray(d.classes)) throw 0;
+      S = Object.assign(defaults(), d, { print: Object.assign(defaults().print, d.print || {}) }); save(); render(); toast('Copie importée'); } catch (err) { toast("Ce fichier n'est pas une sauvegarde du Cahier de classe"); } t.value = ''; };
+    r.readAsText(t.files[0]);
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.classList.contains('grade-in')) { const c = cls(); const ev = c.evals.find(x => x.id === t.dataset.eid);
+    c.grades[ev.id] = c.grades[ev.id] || {}; const v = t.value.trim(); if (v) c.grades[ev.id][t.dataset.sid] = v; else delete c.grades[ev.id][t.dataset.sid];
+    t.className = 'grade-in ' + gradeClass(v, ev.max); save(); updateAverages(c); }
+});
+document.addEventListener('submit', async e => {
+  e.preventDefault(); const c = cls();
+  if (e.target.id === 'pin-form') { const a = $('#pin1').value, b = $('#pin2').value;
+    if (!/^\d{4,6}$/.test(a)) { toast('Le code doit faire 4 à 6 chiffres'); return; }
+    if (a !== b) { toast('Les deux codes ne sont pas identiques'); return; }
+    S.settings.pinSalt = uid() + uid(); S.settings.pinLen = a.length; S.settings.pinHash = await hashPin(a, S.settings.pinSalt); save(); render(); toast('Code activé'); return; }
+  if (e.target.id === 'pin-off-form') { const h = await hashPin($('#pin-cur').value, S.settings.pinSalt);
+    if (h !== S.settings.pinHash) { toast('Code incorrect'); return; }
+    delete S.settings.pinHash; delete S.settings.pinSalt; delete S.settings.pinLen; save(); render(); toast('Code désactivé'); return; }
+  if (e.target.id === 'add-student') { const last = $('#new-last').value.trim(), first = $('#new-first').value.trim(); if (!last) return;
+    c.students.push({ id: uid(), last, first: cap(first) }); save(); render(); $('#new-last').focus(); toast(`${first} ${last} ajouté`); }
+  if (e.target.id === 'eval-form') {
+    const data = { title: $('#ev-title').value.trim(), date: $('#ev-date').value, max: Math.max(1, +$('#ev-max').value || 20), coef: Math.max(0, +$('#ev-coef').value || 0), period: $('#ev-period').value };
+    if (!data.title) return;
+    if (editingEval === 'new') { const ev = { id: uid(), ...data }; c.evals.push(ev); c.grades[ev.id] = {}; } else Object.assign(c.evals.find(x => x.id === editingEval), data);
+    if (S.period !== 'all' && S.period !== data.period) S.period = data.period;
+    const isNew = editingEval === 'new'; const id = isNew ? c.evals[c.evals.length - 1].id : null;
+    editingEval = null; save(); render();
+    if (id) { const first = $(`.grade-in[data-eid="${id}"]`); if (first) first.focus(); toast('Évaluation créée : saisis les notes'); }
+  }
+});
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  // Raccourcis d'onglets
+  if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const tab = TABS.find(x => x.key === e.key); if (tab) { S.tab = tab.id; editingEval = null; save(); render(); return; }
+  }
+  // Appel au clavier
+  const row = t.closest?.('.roll-row');
+  if (row && t === row) {
+    const k = e.key.toUpperCase(); const rows = $$('.roll-row'); const i = rows.indexOf(row);
+    if (['P', 'A', 'R'].includes(k)) { e.preventDefault(); mark(cls(), row.dataset.sid, k); const fresh = $$('.roll-row'); (fresh[i + 1] || fresh[i]).focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); rows[i + 1]?.focus(); }
+    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); rows[i - 1]?.focus(); }
+  }
+  // Saisie des notes : Entrée / flèches
+  if (t.classList?.contains('grade-in')) {
+    const r = +t.dataset.r, col = +t.dataset.c; let nr = r, nc = col;
+    if (e.key === 'Enter' || e.key === 'ArrowDown') nr = e.shiftKey ? r - 1 : r + 1;
+    else if (e.key === 'ArrowUp') nr = r - 1;
+    else return;
+    e.preventDefault(); const n = $(`.grade-in[data-r="${nr}"][data-c="${nc}"]`); if (n) { n.focus(); n.select(); }
+  }
+});
+window.addEventListener('beforeprint', () => { const c = cls(); if (c && !$('#print-root').innerHTML) { $('#print-root').innerHTML = buildDoc(c); } });
+window.addEventListener('afterprint', () => { $('#print-root').innerHTML = ''; });
+
+S = load(); if (S.settings.pinHash) lock(); else render(); if (storageWorks()) save(); else setStatus(false);
+try { navigator.storage?.persist?.(); } catch (e) {}
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
