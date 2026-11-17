@@ -1,6 +1,6 @@
 // Garde l'application en cache pour qu'elle marche sans connexion.
 // Aucune donnée d'élève ne passe par ici : elles restent dans le stockage de l'appareil.
-const CACHE = 'cahier-v2';
+const CACHE = 'cahier-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -69,6 +69,14 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; li
 .tabs { display: flex; gap: 2px; margin-top: 8px; overflow-x: auto; }
 .tab { border: 0; background: none; padding: 9px 14px; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 700; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.lbl-short { display: none; }
+@media (max-width: 720px) {
+  .tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; overflow: visible; }
+  .tab { padding: 10px 2px; font-size: 13px; text-align: center; }
+  .tab kbd, .lbl-long { display: none; }
+  .lbl-short { display: inline; }
+  .kbd-hint { display: none; }
+}
 .tab kbd { font: 11px var(--font-body); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
 
 main { max-width: 1200px; margin: 0 auto; padding-block: 20px 60px;
@@ -126,6 +134,12 @@ label.field input, label.field select { color: var(--fg); font-weight: 400; font
 .seg button.on.R { background: var(--late); color: var(--surface); }
 .appel-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
 @media (max-width: 900px) { .appel-layout { grid-template-columns: minmax(0, 1fr); } }
+.hist-scroll { max-height: 420px; overflow-y: auto; margin-right: -8px; padding-right: 8px; }
+.hist-month { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 4px; }
+.hist-month:first-child { margin-top: 0; }
+.past-banner { background: var(--late-soft); color: var(--late); font-weight: 700; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ranges { display: flex; flex-wrap: wrap; gap: 6px; }
+.ranges .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .side-list button { width: 100%; display: flex; justify-content: space-between; gap: 8px; border: 0; background: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; text-align: left; }
 .side-list button:hover, .side-list button.cur { background: var(--accent-soft); }
@@ -309,11 +323,11 @@ body.locked .app { display: none !important; }
 'use strict';
 const KEY = 'cahier-de-classe-v1';
 const TABS = [
-  { id: 'appel', label: 'Appel', key: '1' },
-  { id: 'notes', label: 'Notes', key: '2' },
-  { id: 'eleves', label: 'Élèves', key: '3' },
-  { id: 'imprimer', label: 'Imprimer', key: '4' },
-  { id: 'reglages', label: 'Réglages & sauvegarde', key: '5' },
+  { id: 'appel', label: 'Appel', short: 'Appel', key: '1' },
+  { id: 'notes', label: 'Notes', short: 'Notes', key: '2' },
+  { id: 'eleves', label: 'Élèves', short: 'Élèves', key: '3' },
+  { id: 'imprimer', label: 'Imprimer', short: 'Imprimer', key: '4' },
+  { id: 'reglages', label: 'Réglages & sauvegarde', short: 'Réglages', key: '5' },
 ];
 const STATUS = { P: 'Présent', A: 'Absent', R: 'Retard' };
 const PERIODS = ['T1', 'T2', 'T3'];
@@ -340,9 +354,15 @@ function defaults() {
     appelDate: today(), period: 'all', print: { type: 'liste', orient: 'portrait', cols: 'Cahier, Signature', blankCols: 12, from: '', to: '', period: 'all', date: '', appr: true } };
 }
 function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); return Object.assign(defaults(), d, { print: Object.assign(defaults().print, d.print || {}) }); } } catch (e) {}
-  const d = defaults(); const c = sampleClass(); d.classes.push(c); d.current = c.id; return d;
+  let d = null;
+  try { const raw = localStorage.getItem(KEY); if (raw) { const x = JSON.parse(raw); d = Object.assign(defaults(), x, { print: Object.assign(defaults().print, x.print || {}) }); } } catch (e) {}
+  if (!d) { d = defaults(); const c = sampleClass(); d.classes.push(c); d.current = c.id; }
+  // À chaque ouverture : onglet Appel, à la date du jour
+  d.tab = 'appel'; d.appelDate = today();
+  return d;
 }
+let openedDay = today();
+function rentree() { const y = +S.settings.year.slice(0, 4) || new Date().getFullYear(); return `${y}-09-01`; }
 let saveTimer;
 function storageWorks() { try { const k = KEY + '-test'; localStorage.setItem(k, '1'); const ok = localStorage.getItem(k) === '1'; localStorage.removeItem(k); return ok; } catch (e) { return false; } }
 function setStatus(ok) {
@@ -380,7 +400,7 @@ function parseGrade(v, max) {
   const n = Number(t.replace(',', '.')); if (isNaN(n) || n < 0 || n > max) return { bad: true };
   return { n };
 }
-const evalsIn = (c, period) => c.evals.filter(e => period === 'all' || e.period === period).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+const evalsIn = (c, period) => c.evals.filter(e => period === 'all' || (period === 'range' ? (e.date || '') >= S.print.from && (e.date || '') <= S.print.to : e.period === period)).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 function studentAvg(c, sid, period) {
   let sum = 0, w = 0;
   evalsIn(c, period).forEach(e => { const g = parseGrade(c.grades[e.id]?.[sid], e.max); if (g.n != null) { sum += g.n / e.max * 20 * e.coef; w += e.coef; } });
@@ -403,7 +423,7 @@ function render() {
   const sel = $('#class-select');
   sel.innerHTML = S.classes.length ? S.classes.map(c => `<option value="${c.id}" ${c.id === S.current ? 'selected' : ''}>${esc(c.name)}</option>`).join('') : '<option>Aucune classe</option>';
   sel.disabled = !S.classes.length;
-  $('#tabs').innerHTML = TABS.map(t => `<button class="tab" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}">${t.label}<kbd>${t.key}</kbd></button>`).join('');
+  $('#tabs').innerHTML = TABS.map(t => `<button class="tab" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}"><span class="lbl-long">${t.label}</span><span class="lbl-short">${t.short}</span><kbd>${t.key}</kbd></button>`).join('');
   const v = $('#view'); const c = cls();
   if (!c && S.tab !== 'reglages') { v.innerHTML = `<div class="empty panel"><h2>Aucune classe pour l'instant</h2><p>Crée ta première classe pour faire l'appel et saisir des notes.</p><button class="btn primary" data-action="new-class">Créer une classe</button></div>`; return; }
   ({ appel: renderAppel, notes: renderNotes, eleves: renderEleves, imprimer: renderImprimer, reglages: renderReglages })[S.tab](v, c);
@@ -414,7 +434,7 @@ function sampleBanner(c) { return c.sample ? `<p class="hint" style="margin:0 0 
 /* ---------- Appel ---------- */
 function renderAppel(v, c) {
   const d = S.appelDate; const rec = c.att[d] || {}; const st = sorted(c);
-  const hist = Object.keys(c.att).sort().reverse().slice(0, 12);
+  const hist = Object.keys(c.att).sort().reverse();
   v.innerHTML = `${sampleBanner(c)}
   <div class="toolbar">
     <div class="date-nav">
@@ -428,20 +448,31 @@ function renderAppel(v, c) {
     <button class="btn primary" data-action="all-present">Tous présents</button>
     <button class="btn ghost" data-action="clear-appel">Effacer</button>
   </div>
+  ${d !== today() ? `<div class="past-banner">Tu consultes l'appel du ${esc(frLong(d))}. Les modifications sont enregistrées pour cette date. <button class="btn small" data-action="day-today">Revenir à aujourd'hui</button></div>` : ''}
   <div class="appel-layout">
     <div>
       <div class="toolbar" style="margin-bottom:10px"><div class="counts" id="counts"></div><div class="spacer"></div>
-      <span class="hint">Clavier : <b>P</b> présent · <b>A</b> absent · <b>R</b> retard · ↑ ↓ pour se déplacer</span></div>
+      <span class="hint kbd-hint">Clavier : <b>P</b> présent · <b>A</b> absent · <b>R</b> retard · ↑ ↓ pour se déplacer</span></div>
       <div class="roll" id="roll">${st.length ? st.map((s, i) => rollRow(c, s, i, rec[s.id])).join('') : `<div class="empty">Aucun élève dans cette classe. Ajoute-les dans l'onglet <b>Élèves</b>.</div>`}</div>
     </div>
     <aside class="panel">
       <h2>Absents du jour</h2><div id="absent-box"></div>
-      <h2 style="margin-top:18px">Appels précédents</h2>
-      ${hist.length ? `<ul class="side-list">${hist.map(h => { const r = c.att[h]; const a = Object.values(r).filter(x => x === 'A').length; const rt = Object.values(r).filter(x => x === 'R').length;
-        return `<li><button data-action="goto-day" data-d="${h}" class="${h === d ? 'cur' : ''}"><span class="when">${esc(frMed(h))}</span><span class="hint num">${a} abs. · ${rt} ret.</span></button></li>`; }).join('')}</ul>` : '<p class="hint">Aucun appel enregistré.</p>'}
+      <h2 style="margin-top:18px">Historique des appels</h2>
+      ${hist.length ? `<p class="hint" style="margin:0 0 8px">${hist.length} appel${hist.length > 1 ? 's' : ''} enregistré${hist.length > 1 ? 's' : ''} pour cette classe. Touche une date pour le revoir ou le corriger.</p>
+      <div class="hist-scroll">${histHTML(c, hist, d)}</div>` : '<p class="hint">Aucun appel enregistré.</p>'}
     </aside>
   </div>`;
   updateCounts(c);
+}
+function histHTML(c, hist, cur) {
+  let out = '', month = '';
+  hist.forEach(h => {
+    const m = parseISO(h).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    if (m !== month) { out += `${month ? '</ul>' : ''}<div class="hist-month">${esc(m)}</div><ul class="side-list">`; month = m; }
+    const r = c.att[h]; const a = Object.values(r).filter(x => x === 'A').length; const rt = Object.values(r).filter(x => x === 'R').length;
+    out += `<li><button data-action="goto-day" data-d="${h}" class="${h === cur ? 'cur' : ''}"><span class="when">${esc(frMed(h))}</span><span class="hint num">${a} abs. · ${rt} ret.</span></button></li>`;
+  });
+  return out + '</ul>';
 }
 function rollRow(c, s, i, val) {
   const a = attCounts(c, s.id);
@@ -569,22 +600,23 @@ const cap = s => s.toLowerCase().replace(/(^|[\s'\-])(\p{L})/gu, (m, a, b) => a 
 const DOCS = [
   { id: 'liste', label: "Liste d'élèves", desc: 'Liste numérotée, avec colonnes libres', orient: 'portrait' },
   { id: 'presence', label: 'Feuille de présence', desc: 'Grille vierge ou remplie avec les appels', orient: 'landscape' },
-  { id: 'appel', label: "Feuille d'appel du jour", desc: "Résultat de l'appel d'une date", orient: 'portrait' },
+  { id: 'appel', label: "Feuilles d'appel", desc: "Un jour ou une période : une page par appel", orient: 'portrait' },
   { id: 'notes', label: 'Relevé de notes de la classe', desc: 'Toutes les notes et moyennes', orient: 'landscape' },
   { id: 'bulletin', label: 'Relevés individuels', desc: 'Une page par élève, à distribuer', orient: 'portrait' },
   { id: 'absences', label: 'Bilan des absences', desc: 'Absences et retards par élève', orient: 'portrait' },
 ];
 function renderImprimer(v, c) {
   const P = S.print; const dates = Object.keys(c.att).sort();
-  if (!P.from) P.from = dates[0] || today(); if (!P.to) P.to = today(); if (!P.date) P.date = S.appelDate;
+  if (!P.from) P.from = rentree(); if (!P.to) P.to = today();
+  if (P.from > P.to) [P.from, P.to] = [P.to, P.from];
   const opts = {
     liste: `<label class="field">Colonnes à ajouter (séparées par des virgules)<input type="text" id="po-cols" value="${esc(P.cols)}" placeholder="Ex : Cahier, Signature, Remarques"></label>`,
     presence: `<label class="field">Contenu<select id="po-mode"><option value="blank" ${P.mode !== 'filled' ? 'selected' : ''}>Grille vierge à remplir</option><option value="filled" ${P.mode === 'filled' ? 'selected' : ''}>Remplie avec les appels enregistrés</option></select></label>
-      ${P.mode === 'filled' ? `<div class="row"><label class="field">Du<input type="date" id="po-from" value="${P.from}"></label><label class="field">Au<input type="date" id="po-to" value="${P.to}"></label></div>`
+      ${P.mode === 'filled' ? rangeBlock(P)
       : `<label class="field">Nombre de colonnes de dates<input type="number" id="po-blank" min="1" max="31" value="${P.blankCols}"></label>`}`,
-    appel: `<label class="field">Date<input type="date" id="po-date" value="${P.date}"></label>`,
+    appel: rangeBlock(P) + `<p class="hint" style="margin:0">Une page par jour d'appel enregistré sur la période. Pour un seul jour, choisis « Aujourd'hui » ou la même date dans les deux cases.</p>`,
     notes: periodSel(P), bulletin: periodSel(P) + `<label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="po-appr" ${P.appr ? 'checked' : ''}> Cadre d'appréciation</label>`,
-    absences: `<div class="row"><label class="field">Du<input type="date" id="po-from" value="${P.from}"></label><label class="field">Au<input type="date" id="po-to" value="${P.to}"></label></div>`,
+    absences: rangeBlock(P),
   };
   v.innerHTML = `<div class="print-layout">
     <aside class="panel">
@@ -600,14 +632,40 @@ function renderImprimer(v, c) {
   </div>`;
   $('#paper').innerHTML = buildDoc(c).replace(/<\/section><section class="doc doc-page">/g, '</section><div class="page-break"></div><section class="doc doc-page">');
 }
-function periodSel(P) { return `<label class="field">Période<select id="po-period">${[['all', "Toute l'année"], ...PERIODS.map(p => [p, 'Trimestre ' + p[1]])].map(([k, l]) => `<option value="${k}" ${P.period === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`; }
-const periodLabel = p => p === 'all' ? "Toute l'année" : 'Trimestre ' + p[1];
+function periodSel(P) { return `<label class="field">Période<select id="po-period">${[['all', "Toute l'année"], ...PERIODS.map(p => [p, 'Trimestre ' + p[1]]), ['range', 'Dates choisies (du… au…)']].map(([k, l]) => `<option value="${k}" ${P.period === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>${P.period === 'range' ? rangeBlock(P) : ''}`; }
+const frFull = s => parseISO(s).toLocaleDateString('fr-FR');
+const rangeLabel = () => S.print.from === S.print.to ? `le ${frFull(S.print.from)}` : `du ${frFull(S.print.from)} au ${frFull(S.print.to)}`;
+const periodLabel = p => p === 'all' ? "Toute l'année" : p === 'range' ? rangeLabel() : 'Trimestre ' + p[1];
+function presetRange(k) {
+  const t = today(), d = new Date();
+  if (k === 'today') return [t, t];
+  if (k === 'week') { const wd = (d.getDay() + 6) % 7; return [addDays(t, -wd), addDays(t, 6 - wd)]; }
+  if (k === 'month') return [isoDate(new Date(d.getFullYear(), d.getMonth(), 1)), isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+  if (k === 'lastmonth') return [isoDate(new Date(d.getFullYear(), d.getMonth() - 1, 1)), isoDate(new Date(d.getFullYear(), d.getMonth(), 0))];
+  return [rentree(), t];
+}
+const PRESETS = [['today', "Aujourd'hui"], ['week', 'Cette semaine'], ['month', 'Ce mois-ci'], ['lastmonth', 'Mois dernier'], ['year', 'Depuis la rentrée']];
+function rangeBlock(P) {
+  return `<div class="ranges">${PRESETS.map(([k, l]) => { const [f, t] = presetRange(k); return `<button class="btn small ${P.from === f && P.to === t ? 'on' : ''}" data-action="range" data-r="${k}">${l}</button>`; }).join('')}</div>
+  <div class="row"><label class="field">Du<input type="date" id="po-from" value="${P.from}"></label><label class="field">Au<input type="date" id="po-to" value="${P.to}"></label></div>`;
+}
 function head(c, title, sub) {
   const st = S.settings;
   return `<div class="doc-head"><div>${st.school ? `<div class="doc-school">${esc(st.school)}</div>` : ''}<h1>${esc(title)}</h1><div class="doc-sub">Classe : <b>${esc(c.name)}</b>${sub ? ' · ' + sub : ''}</div></div>
   <div class="doc-meta">${st.teacher ? esc(st.teacher) + '<br>' : ''}Année ${esc(st.year)}<br>Imprimé le ${new Date().toLocaleDateString('fr-FR')}</div></div>`;
 }
 const nameCells = s => `<td class="nm"><span class="last">${esc(s.last)}</span> ${esc(s.first)}</td>`;
+function appelPage(c, st, day, page) {
+      const rec = c.att[day] || {}; const n = { P: 0, A: 0, R: 0 }; Object.values(rec).forEach(v => n[v]++);
+      const abs = st.filter(s => rec[s.id] === 'A'), late = st.filter(s => rec[s.id] === 'R');
+      return page(`${head(c, "Feuille d'appel", esc(frLong(day)))}
+        <p class="summary"><b>${n.P}</b> présents · <b>${n.A}</b> absents · <b>${n.R}</b> retards${!Object.keys(rec).length ? ' · <i>appel non effectué pour cette date</i>' : ''}</p>
+        ${abs.length ? `<p class="summary"><b>Absents :</b> ${abs.map(fullName).map(esc).join(', ')}</p>` : ''}
+        ${late.length ? `<p class="summary"><b>En retard :</b> ${late.map(fullName).map(esc).join(', ')}</p>` : ''}
+        <table class="tall"><thead><tr><th>N°</th><th>Nom</th><th>Prénom</th><th>Statut</th><th>Observation</th></tr></thead>
+        <tbody>${st.map((s, i) => { const v = rec[s.id]; return `<tr><td class="n">${i + 1}</td><td class="last">${esc(s.last)}</td><td>${esc(s.first)}</td><td class="c ${v || ''}">${v ? STATUS[v] : ''}</td><td style="width:35%"></td></tr>`; }).join('')}</tbody></table>
+        <div class="sign"><span>Enseignant : ${esc(S.settings.teacher)}</span><span>Signature :</span></div>`);
+    }
 function buildDoc(c) {
   const P = S.print; const st = sorted(c);
   const page = inner => `<section class="doc doc-page">${inner}</section>`;
@@ -620,8 +678,8 @@ function buildDoc(c) {
     case 'presence': {
       if (P.mode === 'filled') {
         const ds = Object.keys(c.att).filter(d => d >= P.from && d <= P.to).sort();
-        if (!ds.length) return page(`${head(c, 'Feuille de présence')}<p>Aucun appel enregistré entre le ${frShort(P.from)} et le ${frShort(P.to)}.</p>`);
-        return page(`${head(c, 'Feuille de présence', `du ${parseISO(P.from).toLocaleDateString('fr-FR')} au ${parseISO(P.to).toLocaleDateString('fr-FR')}`)}
+        if (!ds.length) return page(`${head(c, 'Feuille de présence', rangeLabel())}<p>Aucun appel enregistré sur cette période.</p>`);
+        return page(`${head(c, 'Feuille de présence', rangeLabel())}
         <table><thead><tr><th>N°</th><th class="nmh">Élève</th>${ds.map(d => `<th class="vert">${esc(frMed(d))}</th>`).join('')}<th>Abs.</th><th>Ret.</th></tr></thead>
         <tbody>${st.map((s, i) => { let a = 0, r = 0; const cells = ds.map(d => { const v = c.att[d][s.id]; if (v === 'A') a++; if (v === 'R') r++; return `<td class="c ${v || ''}">${v === 'P' ? '·' : v || ''}</td>`; }).join('');
           return `<tr><td class="n">${i + 1}</td>${nameCells(s)}${cells}<td class="c">${a || ''}</td><td class="c">${r || ''}</td></tr>`; }).join('')}</tbody></table>
@@ -633,15 +691,9 @@ function buildDoc(c) {
         <div class="foot"><span>Inscrire la date en tête de colonne · A = absent, R = retard</span><span>Signature :</span></div>`);
     }
     case 'appel': {
-      const rec = c.att[P.date] || {}; const n = { P: 0, A: 0, R: 0 }; Object.values(rec).forEach(v => n[v]++);
-      const abs = st.filter(s => rec[s.id] === 'A'), late = st.filter(s => rec[s.id] === 'R');
-      return page(`${head(c, "Feuille d'appel", esc(frLong(P.date)))}
-        <p class="summary"><b>${n.P}</b> présents · <b>${n.A}</b> absents · <b>${n.R}</b> retards${!Object.keys(rec).length ? ' · <i>appel non effectué pour cette date</i>' : ''}</p>
-        ${abs.length ? `<p class="summary"><b>Absents :</b> ${abs.map(fullName).map(esc).join(', ')}</p>` : ''}
-        ${late.length ? `<p class="summary"><b>En retard :</b> ${late.map(fullName).map(esc).join(', ')}</p>` : ''}
-        <table class="tall"><thead><tr><th>N°</th><th>Nom</th><th>Prénom</th><th>Statut</th><th>Observation</th></tr></thead>
-        <tbody>${st.map((s, i) => { const v = rec[s.id]; return `<tr><td class="n">${i + 1}</td><td class="last">${esc(s.last)}</td><td>${esc(s.first)}</td><td class="c ${v || ''}">${v ? STATUS[v] : ''}</td><td style="width:35%"></td></tr>`; }).join('')}</tbody></table>
-        <div class="sign"><span>Enseignant : ${esc(S.settings.teacher)}</span><span>Signature :</span></div>`);
+      const days = Object.keys(c.att).filter(d => d >= P.from && d <= P.to).sort();
+      if (!days.length) return page(`${head(c, "Feuille d'appel", rangeLabel())}<p>Aucun appel enregistré sur cette période.</p>`);
+      return days.map(day => appelPage(c, st, day, page)).join('');
     }
     case 'notes': {
       const evs = evalsIn(c, P.period); if (!evs.length) return page(`${head(c, 'Relevé de notes', periodLabel(P.period))}<p>Aucune évaluation sur cette période.</p>`);
@@ -652,13 +704,13 @@ function buildDoc(c) {
     }
     case 'bulletin': {
       const evs = evalsIn(c, P.period);
-      return st.map(s => { const a = studentAvg(c, s.id, P.period); const at = attCounts(c, s.id);
+      return st.map(s => { const a = studentAvg(c, s.id, P.period); const at = P.period === 'range' ? attCounts(c, s.id, P.from, P.to) : attCounts(c, s.id);
         return page(`${head(c, 'Relevé de notes individuel', periodLabel(P.period))}
         <p style="font-size:13pt;margin:4px 0 10px">Élève : <span class="last">${esc(s.last)}</span> <b>${esc(s.first)}</b></p>
         ${evs.length ? `<table><thead><tr><th style="text-align:left">Évaluation</th><th>Date</th><th>Note</th><th>Coef.</th><th>Sur 20</th><th>Moy. classe</th></tr></thead>
         <tbody>${evs.map(e => { const v = c.grades[e.id]?.[s.id] ?? ''; const g = parseGrade(v, e.max); const es = evalStats(c, e);
           return `<tr><td>${esc(e.title)}</td><td class="c">${e.date ? frShort(e.date) : ''}</td><td class="c">${v ? esc(v) + ' / ' + e.max : '–'}</td><td class="c">${String(e.coef).replace('.', ',')}</td><td class="c ${g.n != null && g.n / e.max < .5 ? 'low' : ''}">${g.n != null ? fmt(g.n / e.max * 20) : '–'}</td><td class="c">${es.avg != null ? fmt(es.avg / e.max * 20) : '–'}</td></tr>`; }).join('')}</tbody></table>` : '<p>Aucune évaluation sur cette période.</p>'}
-        <p class="summary" style="margin-top:12px">Moyenne : <span class="big-avg ${a != null && a < 10 ? 'low' : ''}">${fmt(a)} / 20</span> &nbsp;·&nbsp; Absences sur l'année : <b>${at.A}</b> · Retards : <b>${at.R}</b></p>
+        <p class="summary" style="margin-top:12px">Moyenne : <span class="big-avg ${a != null && a < 10 ? 'low' : ''}">${fmt(a)} / 20</span> &nbsp;·&nbsp; Absences ${P.period === 'range' ? 'sur la période' : "sur l'année"} : <b>${at.A}</b> · Retards : <b>${at.R}</b></p>
         ${P.appr ? `<div class="appr"><b>Appréciation</b><div class="appr-lines"></div></div><div class="sign"><span>Signature de l'enseignant</span><span>Signature des responsables légaux</span></div>` : ''}`); }).join('');
     }
     case 'absences': {
@@ -761,6 +813,7 @@ window.addEventListener('keydown', e => {
   if (/^\d$/.test(e.key)) pressKey(e.key); else if (e.key === 'Backspace') pressKey('del');
 }, true);
 document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && today() !== openedDay) { openedDay = today(); S.appelDate = today(); S.tab = 'appel'; save(); render(); }
   if (document.hidden) hiddenAt = Date.now();
   else if (S.settings.pinHash && !locked && hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) lock();
 });
@@ -796,6 +849,7 @@ document.addEventListener('click', e => {
     case 'del-class-no': confirmDelClass = false; render(); break;
     case 'del-class-yes': S.classes = S.classes.filter(x => x.id !== c.id); S.current = S.classes[0]?.id || null; confirmDelClass = false; S.tab = S.classes.length ? 'eleves' : 'appel'; save(); render(); toast('Classe supprimée'); break;
     case 'print': doPrint(); break;
+    case 'range': { const [f, t] = presetRange(b.dataset.r); S.print.from = f; S.print.to = t; save(); render(); break; }
     case 'export': exportData(); break;
     case 'lock-now': lock(); break;
     case 'import': $('#import-file').click(); break;
